@@ -80,5 +80,5 @@ jobs:
       - name: Upload Final ZIP
         uses: actions/upload-artifact@v4
         with:
-          name: createClippingMasks
+          name: createClippingMasks_Ver.1.0
           path: createClippingMasks_Ver.1.0.zip
