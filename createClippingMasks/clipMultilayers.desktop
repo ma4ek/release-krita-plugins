@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Service
+ServiceTypes=Krita/PythonPlugin
+X-KDE-Library=createClippingMasks
+X-Python-2-Compatible=false
+X-Krita-Manual=createClippingMasks.html
+
+Name=Generate Clipping Masks by each layer
+Name[ja]=クリッピングマスク一括生成
+Comment=A plugin that makes clipping groups(masks) by layers you choose.
+Comment[ja]=グループレイヤーもしくはペイントレイヤーに対し、それぞれクリッピンググループとして一括に生成するプラグインです。
+
+# Copyright (c) 2026 きぃ(ma4ek) (Licensed under GPL v3)
+X-KDE-PluginInfo-Author=きぃ(ma4ek)
+X-KDE-PluginInfo-License=GPLv3

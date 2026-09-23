@@ -1,0 +1,84 @@
+name: Build Krita Plugin and Packaging
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  # -----------------------------------------------------------------
+  # 1. コンパイルジョブ（3つのOSで並列ビルド）
+  # -----------------------------------------------------------------
+  build-binaries:
+    strategy:
+      matrix:
+        include:
+          - os: windows-latest
+            artifact-name: colorconv.dll
+            # 💡 入力パスを src/ に変更
+            compile-cmd: gcc -shared -O3 -o colorconv.dll src/colorconv.c
+          - os: macos-latest
+            artifact-name: colorconv.dylib
+            # macOS（Apple Silicon専用のNEON最適化）
+            compile-cmd: gcc -shared -O3 -arch arm64 -o colorconv.dylib src/colorconv.c
+          - os: ubuntu-latest
+            artifact-name: colorconv.so
+            compile-cmd: gcc -shared -O3 -fPIC -o colorconv.so src/colorconv.c
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 各環境でコンパイルを実行
+      - name: Compile Library
+        run: ${{ matrix.compile-cmd }}
+
+      # 生成されたバイナリを一時保管
+      - name: Upload Intermediates
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-${{ matrix.os }}
+          path: ${{ matrix.artifact-name }}
+
+  # -----------------------------------------------------------------
+  # 2. パッケージングジョブ（バイナリをまとめたZIPを作成）
+  # -----------------------------------------------------------------
+  package-plugin:
+    needs: build-binaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 3つのOSで作ったバイナリをこのUbuntu環境に集約
+      - name: Download all binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: temp-binaries
+
+      # フォルダ構成を整えてZIP圧縮する
+      - name: Create Zip Package
+        run: |
+          # 成果物を配置する作業用フォルダを作成
+          mkdir -p release-krita-plugins/createClippingMasks/libs
+          
+          # リポジトリ内のプラグインコード一式（Pythonやdesktopファイル）をコピー
+          cp -r createClippingMasks/* release-krita-plugins/createClippingMasks/
+          
+          # 各OS用のバイナリを、プラグイン内の「libs」フォルダに自動集約！
+          cp temp-binaries/bin-windows-latest/colorconv.dll release-krita-plugins/createClippingMasks/libs/
+          cp temp-binaries/bin-macos-latest/colorconv.dylib release-krita-plugins/createClippingMasks/libs/
+          cp temp-binaries/bin-ubuntu-latest/colorconv.so release-krita-plugins/createClippingMasks/libs/
+          
+          # フォルダごと丸ごとZIP圧縮
+          cd release-krita-plugins
+          zip -r ../createClippingMasks_Ver.1.0.zip createClippingMasks/
+
+      # 完成したZIPパッケージをGitHubのArtifactsに保存（ここからダウンロード可能になります）
+      - name: Upload Final ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: createClippingMasks
+          path: createClippingMasks_Ver.1.0.zip
